@@ -1,23 +1,23 @@
 package cliente;
-
-import java.io.DataInputStream;
-import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.net.UnknownHostException;
 
-
 public class main {
-///mecagoentutiatuprimaitumadre	
-	
-	public Socket socket;
-	public DataOutputStream dataOutputStream;
-	public final int PUERTO = 1234;
-	public final String HOST = "127.0.0.1";
 
-	public static void main(String[] args) {
-		// TODO Auto-generated method stub
-s
-	}
+    public static void main(String[] args) {
+        final int PUERTO = 1234;
+        final String HOST = "localhost";
 
+        try (Socket socket = new Socket(HOST, PUERTO)) {
+            HilosCliente cliente = new HilosCliente(socket);
+            cliente.runCliente();
+        } catch (UnknownHostException e) {
+          System.err.println("No se puede encontrar el host: " + e.getMessage());
+        } catch (IOException e) {
+            System.err.println("Error de entrada/salida: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error inesperado: " + e.getMessage());
+        }
+    }
 }
