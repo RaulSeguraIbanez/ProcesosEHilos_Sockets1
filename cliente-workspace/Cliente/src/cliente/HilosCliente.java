@@ -31,7 +31,11 @@ public class HilosCliente {
                     while (true) {
                         String mensaje = dataInputStream.readUTF();
                         System.out.println("Recibido del servidor: " + mensaje);
-                        // Código adicional si es necesario
+                        if (mensaje.equalsIgnoreCase("pepito")) { // Si el servidor envía "Adios", cierra la conexión
+                            System.out.println("Conexion finalizada");
+                            cerrarConexion();
+                            break;
+                        }
                     }
                 } catch (IOException e) {
                     System.out.println("Error al recibir mensajes del servidor: " + e.getMessage());
@@ -44,8 +48,9 @@ public class HilosCliente {
                 try {
                     String consoleInput;
                     while ((consoleInput = inputReader.readLine()) != null) {
-                        // Envía el mensaje al servidor con un salto de línea al final
-                        dataOutputStream.writeUTF(consoleInput + "\n");
+                        // Envía el mensaje al servidor
+                        dataOutputStream.writeUTF(consoleInput);
+                        dataOutputStream.flush();
                     }
                 } catch (IOException e) {
                     System.out.println("Error al enviar mensaje al servidor: " + e.getMessage());
@@ -60,15 +65,19 @@ public class HilosCliente {
         } catch (InterruptedException e) {
             System.out.println("Error en la comunicación con el servidor: " + e.getMessage());
         } finally {
-            try {
-                inputReader.close();
-                dataInputStream.close();
-                dataOutputStream.close();
-                socket.close();
-                System.out.println("Conexión cerrada. OK");
-            } catch (IOException e) {
-                System.out.println("Error al cerrar la conexión: " + e.getMessage());
-            }
+            cerrarConexion();
+        }
+    }
+
+    private void cerrarConexion() {
+        try {
+            inputReader.close();
+            dataInputStream.close();
+            dataOutputStream.close();
+            socket.close();
+            System.out.println("Conexión cerrada. OK");
+        } catch (IOException e) {
+            System.out.println("Error al cerrar la conexión: " + e.getMessage());
         }
     }
 
@@ -82,3 +91,4 @@ public class HilosCliente {
         }
     }
 }
+

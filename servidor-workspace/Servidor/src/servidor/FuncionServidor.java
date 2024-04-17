@@ -1,6 +1,7 @@
 package servidor;
 
 import java.io.BufferedReader;
+import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -9,58 +10,65 @@ import java.net.Socket;
 
 public class FuncionServidor {
 
-    public Socket socket;
-    public ServerSocket serverSocket;
-    public final int PUERTO = 1234;
-    public DataOutputStream dataOutputStream;
-    public String mensaje;
+    private ServerSocket serverSocket;
+    private final int PUERTO = 4321; // Puerto del servidor
+    private DataInputStream dataInputStream;
+    private DataOutputStream dataOutputStream;
 
     public FuncionServidor() throws IOException {
         this.serverSocket = new ServerSocket(PUERTO); // Inicializamos el servidor
-        this.socket = new Socket();
     }
 
     public void runServer() throws IOException {
-        System.out.print("Conexion del cliente...");
+        System.out.println("Servidor en espera. Buscando conexiones...");
 
-        this.socket = this.serverSocket.accept(); // Esperando a que algún cliente se conecte
+        Socket clientSocket = serverSocket.accept(); // Esperando a que algún cliente se conecte
 
-        System.out.println("OK");
+        System.out.println("Cliente conectado desde " + clientSocket.getInetAddress()); // Información del cliente
 
-        this.dataOutputStream = new DataOutputStream(this.socket.getOutputStream()); // Flujo donde se guarda lo que se envía al cliente
-        this.dataOutputStream.writeUTF("Conexión aceptada\n"); // Asegúrate de incluir el salto de línea
+        this.dataInputStream = new DataInputStream(clientSocket.getInputStream()); // Flujo de entrada para recibir datos del cliente
+        this.dataOutputStream = new DataOutputStream(clientSocket.getOutputStream()); // Flujo de salida para enviar datos al cliente
 
-        BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(this.socket.getInputStream()));
+        // Hilo para recibir mensajes del cliente
+        Thread recibirMensajes = new Thread(() -> {
+            try {
+                while (true) {
+                    String mensaje = dataInputStream.readUTF(); // Lee un mensaje del cliente
+                    System.out.println("Cliente: " + mensaje); // Imprime el mensaje recibido del cliente
+                    if (mensaje.equalsIgnoreCase("manolo")) { // Si el cliente envía "Adios", cierra la conexión
+                        System.out.println("Conexion finalizada");
+                        dataOutputStream.writeUTF("Conexion finalizada"); // Envía un mensaje de confirmación al cliente
+                        cerrarConexion(serverSocket, clientSocket, dataOutputStream, dataInputStream);
+                        break;
+                    }
+                }
+            } catch (IOException e) {
+                System.out.println("Error al recibir mensajes del cliente: " + e.getMessage());
+            }
+        });
+        recibirMensajes.start(); // Inicia el hilo para recibir mensajes del cliente
 
-        // Hilo para leer la entrada de la consola y enviar al cliente
+        // Hilo para enviar mensajes al cliente desde la consola del servidor
         Thread enviarMensajes = new Thread(() -> {
             try {
                 BufferedReader consoleReader = new BufferedReader(new InputStreamReader(System.in));
                 String consoleInput;
                 while ((consoleInput = consoleReader.readLine()) != null) {
-                    // Solo envía el mensaje si la entrada proviene del servidor
-                    if (!consoleInput.isEmpty()) {
-                        dataOutputStream.writeUTF(consoleInput + "\n"); // Asegúrate de incluir el salto de línea
-                    }
+                    dataOutputStream.writeUTF(consoleInput); // Envía el mensaje al cliente
                 }
             } catch (IOException e) {
-                e.printStackTrace();
+                System.out.println("Error al enviar mensaje al cliente: " + e.getMessage());
             }
         });
-        enviarMensajes.start();
+        enviarMensajes.start(); // Inicia el hilo para enviar mensajes al cliente
 
-        String receivedMessage;
-        while (true) {
-            receivedMessage = bufferedReader.readLine(); // Cambiado a readLine
-            if (receivedMessage != null && !receivedMessage.trim().isEmpty()) {
-                // Imprime el mensaje recibido del cliente
-                System.out.println("Recibido del Cliente: " + receivedMessage);
-                System.out.println("pinguino"); // Imprime "pinguino" cada vez que recibe un mensaje del cliente
-            }
+        // Espera a que ambos hilos terminen
+        try {
+            recibirMensajes.join();
+            enviarMensajes.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
         }
-
-        // Nota: Este código no cerrará correctamente los recursos y la conexión porque el bucle while es infinito.
-        // Deberías considerar implementar una condición de salida y cerrar los recursos fuera del bucle.
     }
 
     public static void main(String[] args) {
@@ -71,4 +79,16 @@ public class FuncionServidor {
             e.printStackTrace();
         }
     }
+
+    public static void cerrarConexion(ServerSocket serverSocket, Socket clientSocket, DataOutputStream dataOutputStream, DataInputStream dataInputStream) {
+        try {
+            dataOutputStream.close();
+            dataInputStream.close();
+            clientSocket.close();
+            serverSocket.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 }
+
